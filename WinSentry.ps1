@@ -21,7 +21,8 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\WinSentry.ps1 -CompareTo "C:\path\to\old_winsentry_report.json"
 #>
 param(
-    [string]$CompareTo = ""
+    [string]$CompareTo = "",
+    [string]$Password = ""
 )
 
 # WinSentry v1 (Secure PDF Generation)
@@ -31,7 +32,12 @@ Write-Host "=========================================" -ForegroundColor Cyan
 Write-Host "         WinSentry v1 - Scanner          " -ForegroundColor Cyan
 Write-Host "=========================================" -ForegroundColor Cyan
 
-$securePassword = Read-Host "Enter a password to encrypt the PDF report" -AsSecureString
+if ($Password) {
+    $securePassword = ConvertTo-SecureString $Password -AsPlainText -Force
+} else {
+    $securePassword = Read-Host "Enter a password to encrypt the PDF report" -AsSecureString
+}
+
 if (-not $securePassword) {
     Write-Error "Password is required for PDF encryption."
     exit
