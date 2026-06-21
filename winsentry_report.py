@@ -308,6 +308,15 @@ def generate_pdf(html_content, final_pdf_path, password):
         f.write(final_buffer.getvalue())
 
 def main():
+    import os
+    # Prevent Windows CRT bug where FD 0, 1, or 2 are reused for writing
+    try:
+        _dummy1 = open(os.devnull, 'r')
+        _dummy2 = open(os.devnull, 'w')
+        _dummy3 = open(os.devnull, 'w')
+    except:
+        pass
+
     args = parse_args()
 
     password = None
