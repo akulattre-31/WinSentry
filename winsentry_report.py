@@ -277,35 +277,35 @@ Weights:
 
 def generate_pdf(html_content, final_pdf_path, password):
     from xhtml2pdf import pisa
-    import tempfile
+    import io
+    import os
     
-    # Create temp files
-    temp_dir = tempfile.mkdtemp()
-    temp_pdf_path = os.path.join(temp_dir, "temp.pdf")
+    final_pdf_path = os.path.abspath(final_pdf_path)
     
-    try:
-        # Use xhtml2pdf to generate PDF natively in pure Python (No Edge required!)
-        with open(temp_pdf_path, "w+b") as result_file:
-            pisa_status = pisa.CreatePDF(html_content, dest=result_file)
-            
-        if pisa_status.err:
-            raise RuntimeError("xhtml2pdf failed to generate PDF.")
-            
-        # Encrypt the PDF
-        reader = PdfReader(temp_pdf_path)
-        writer = PdfWriter()
+    # Use xhtml2pdf to generate PDF natively in memory
+    pdf_buffer = io.BytesIO()
+    pisa_status = pisa.CreatePDF(html_content, dest=pdf_buffer)
+    
+    if pisa_status.err:
+        raise RuntimeError("xhtml2pdf failed to generate PDF.")
         
-        for page in reader.pages:
-            writer.add_page(page)
-            
-        writer.encrypt(password)
+    pdf_buffer.seek(0)
+    
+    # Encrypt the PDF
+    reader = PdfReader(pdf_buffer)
+    writer = PdfWriter()
+    
+    for page in reader.pages:
+        writer.add_page(page)
         
-        with open(final_pdf_path, "wb") as f:
-            writer.write(f)
-            
-    finally:
-        import shutil
-        shutil.rmtree(temp_dir, ignore_errors=True)
+    writer.encrypt(password)
+    
+    # Write the encrypted PDF directly to the final file
+    final_buffer = io.BytesIO()
+    writer.write(final_buffer)
+    
+    with open(final_pdf_path, "wb") as f:
+        f.write(final_buffer.getvalue())
 
 def main():
     args = parse_args()
@@ -356,6 +356,9 @@ def main():
         generate_pdf(html_content, args.output_pdf, password)
         print(f"Successfully generated encrypted PDF report at: {args.output_pdf}")
     except Exception as e:
+        import traceback
+        with open("error_log.txt", "w") as f:
+            f.write(traceback.format_exc())
         print(f"Error generating PDF: {e}", file=sys.stderr)
         sys.exit(1)
 
