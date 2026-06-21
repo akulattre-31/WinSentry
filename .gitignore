@@ -1,0 +1,12 @@
+# Python build artifacts
+__pycache__/
+build/
+dist/
+*.spec
+
+# WinSentry scan artifacts (Protect Personal Data)
+*.json
+*.json.sha256
+*.html
+*.pdf
+temp.*
