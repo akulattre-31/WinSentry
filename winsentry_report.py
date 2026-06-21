@@ -300,12 +300,18 @@ def generate_pdf(html_content, final_pdf_path, password):
         
     writer.encrypt(password)
     
-    # Write the encrypted PDF directly to the final file
+    # Write the encrypted PDF directly to the final file using low-level OS calls
     final_buffer = io.BytesIO()
     writer.write(final_buffer)
     
-    with open(final_pdf_path, "wb") as f:
-        f.write(final_buffer.getvalue())
+    try:
+        fd = os.open(final_pdf_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_BINARY)
+        os.write(fd, final_buffer.getvalue())
+        os.close(fd)
+    except Exception as e:
+        # Fallback to pure python open just in case
+        with open(final_pdf_path, "wb") as f:
+            f.write(final_buffer.getvalue())
 
 def main():
     import os
