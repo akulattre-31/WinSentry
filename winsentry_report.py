@@ -308,9 +308,9 @@ def generate_pdf(html_content, final_pdf_path, password):
     
     if is_base64:
         import base64
-        sys.stdout.write("BASE64_PDF_START\\n")
+        sys.stdout.write("BASE64_PDF_START\n")
         sys.stdout.write(base64.b64encode(final_buffer.getvalue()).decode('utf-8'))
-        sys.stdout.write("\\nBASE64_PDF_END\\n")
+        sys.stdout.write("\nBASE64_PDF_END\n")
         sys.stdout.flush()
         return
 
