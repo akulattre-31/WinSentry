@@ -8,6 +8,7 @@ from datetime import datetime
 import os
 import subprocess
 import pathlib
+import getpass
 from PyPDF2 import PdfReader, PdfWriter
 
 def parse_args():
@@ -354,14 +355,24 @@ def generate_pdf(html_content, final_pdf_path, password):
 def main():
     args = parse_args()
 
-    password = os.environ.get("WINSENTRY_PDF_PWD")
+    # Prompt securely for the password without echoing to the screen or using env vars
+    print("PDF Encryption Setup", file=sys.stderr)
+    password = getpass.getpass("Enter a strong password to lock the report: ")
     if not password:
-        print("Error: WINSENTRY_PDF_PWD environment variable is required for PDF encryption.", file=sys.stderr)
+        print("Error: Password is required to encrypt the PDF.", file=sys.stderr)
         sys.exit(1)
 
     try:
-        with open(args.input_json, "r", encoding="utf-8-sig") as f:
-            data = json.load(f)
+        if args.input_json == "-":
+            # Read from standard input (pipeline)
+            json_str = sys.stdin.read()
+            # If the script pipes empty string or just whitespace
+            if not json_str.strip():
+                raise ValueError("No JSON data received from standard input.")
+            data = json.loads(json_str)
+        else:
+            with open(args.input_json, "r", encoding="utf-8-sig") as f:
+                data = json.load(f)
     except Exception as e:
         print(f"Error reading JSON: {e}", file=sys.stderr)
         sys.exit(1)

@@ -31,38 +31,6 @@ Write-Host "=========================================" -ForegroundColor Cyan
 Write-Host "         WinSentry v1 - Scanner          " -ForegroundColor Cyan
 Write-Host "=========================================" -ForegroundColor Cyan
 
-$securePassword = Read-Host "Enter a password to encrypt the PDF report" -AsSecureString
-if (-not $securePassword) {
-    Write-Error "Password is required for PDF encryption."
-    exit
-}
-
-$BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword)
-$plainPassword = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
-[Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
-$env:WINSENTRY_PDF_PWD = $plainPassword
-
-$tempJsonPath = [System.IO.Path]::GetTempFileName()
-
-function Wipe-File {
-    param([string]$Path)
-    if (Test-Path $Path) {
-        try {
-            $size = (Get-Item $Path).Length
-            if ($size -gt 0) {
-                $bytes = New-Object byte[] $size
-                $rand = New-Object Random
-                $rand.NextBytes($bytes)
-                [System.IO.File]::WriteAllBytes($Path, $bytes)
-            }
-            Remove-Item -Path $Path -Force
-        } catch {
-            Write-Warning "Failed to securely wipe $Path. Attempting standard delete."
-            Remove-Item -Path $Path -Force -ErrorAction SilentlyContinue
-        }
-    }
-}
-
 # Enforce Self-Targeting: Implicitly local by design (no -ComputerName parameters used).
 
 # --- Configuration & Helpers ---
@@ -410,6 +378,29 @@ try {
             }
         }
     }
+
+    # WMI Event Consumers
+    try {
+        $consumers = Get-CimInstance -Namespace root\subscription -Class __EventConsumer -ErrorAction SilentlyContinue
+        foreach ($c in $consumers) {
+            $Modules.persistence.findings += New-Finding -Id "PER-WMI" -Severity "HIGH" -Title "WMI Event Consumer Detected" -Detail "Name: $($c.Name)`nType: $($c.CimClass.CimClassName)" -Recommendation "WMI Event Consumers are commonly used by advanced malware for fileless persistence. Investigate immediately."
+        }
+    } catch {}
+
+    # Image File Execution Options (IFEO) Hijacking
+    try {
+        $ifeoPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options"
+        if (Test-Path $ifeoPath) {
+            $subkeys = Get-ChildItem -Path $ifeoPath -ErrorAction SilentlyContinue
+            foreach ($sk in $subkeys) {
+                $debugger = Get-ItemProperty -Path $sk.PSPath -Name "Debugger" -ErrorAction SilentlyContinue
+                if ($debugger) {
+                    $Modules.persistence.findings += New-Finding -Id "PER-IFEO" -Severity "HIGH" -Title "IFEO Debugger Hijack" -Detail "Process: $($sk.PSChildName)`nDebugger: $($debugger.Debugger)" -Recommendation "A debugger is attached to this process via IFEO. This is a known persistence technique. Investigate the debugger binary."
+                }
+            }
+        }
+    } catch {}
+
 } catch {
     $Modules.persistence.status = "skipped"
     $Modules.persistence.findings += New-Finding -Id "PER-ERR" -Severity "INFO" -Title "Persistence Check Failed" -Detail $_.Exception.Message -Recommendation "Run as Administrator."
@@ -612,23 +603,20 @@ if ($DiffOutput) {
 
 # Write JSON
 $reportJson = $Report | ConvertTo-Json -Depth 10 -Compress:$false
-$ReportPath = $tempJsonPath
-$reportJson | Set-Content -Path $ReportPath -Encoding UTF8
 
-Write-Host "Scan complete. Generating encrypted PDF..." -ForegroundColor Green
+Write-Host "Scan complete. Preparing to generate PDF..." -ForegroundColor Green
 
 if (Test-Path ".\winsentry_report.exe") {
     $pdfPath = ".\WinSentry_Report_Encrypted.pdf"
-    & .\winsentry_report.exe $ReportPath $pdfPath
+    
+    # Pipe the JSON output directly to the executable
+    $reportJson | .\winsentry_report.exe - $pdfPath
+    
     if ($LASTEXITCODE -eq 0) {
         Write-Host "Report secured at: $pdfPath" -ForegroundColor Green
     } else {
         Write-Host "Failed to generate PDF. Check winsentry_report.exe output." -ForegroundColor Red
     }
 } else {
-    Write-Host "Warning: winsentry_report.exe not found in current directory. Temporary JSON file has been wiped." -ForegroundColor Yellow
+    Write-Host "Error: winsentry_report.exe not found in current directory. Cannot generate report." -ForegroundColor Red
 }
-
-# Secure Wipe and Cleanup
-Wipe-File -Path $tempJsonPath
-$env:WINSENTRY_PDF_PWD = $null
