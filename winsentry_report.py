@@ -309,9 +309,11 @@ Weights:
 
 def generate_pdf(html_content, final_pdf_path, password):
     import tempfile
+    import time
     
     # Create temp files
     temp_dir = tempfile.mkdtemp()
+    profile_dir = os.path.join(temp_dir, "edge_profile")
     html_path = os.path.join(temp_dir, "temp.html")
     temp_pdf_path = os.path.join(temp_dir, "temp.pdf")
     
@@ -320,20 +322,29 @@ def generate_pdf(html_content, final_pdf_path, password):
         
     html_abs = str(pathlib.Path(html_path).absolute())
     temp_pdf_abs = str(pathlib.Path(temp_pdf_path).absolute())
+    profile_abs = str(pathlib.Path(profile_dir).absolute())
     
     # Use MS Edge to generate PDF natively
     edge_cmd = [
         r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
-        "--headless",
+        "--headless=new",
         "--disable-gpu",
         "--no-sandbox",
         "--disable-software-rasterizer",
-        f"--user-data-dir={temp_dir}",
+        f"--user-data-dir={profile_abs}",
         f"--print-to-pdf={temp_pdf_abs}",
         html_abs
     ]
     try:
-        subprocess.run(edge_cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        proc = subprocess.run(edge_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        
+        # Wait up to 15 seconds for the PDF to be fully generated
+        for _ in range(150):
+            if os.path.exists(temp_pdf_abs) and os.path.getsize(temp_pdf_abs) > 0:
+                break
+            time.sleep(0.1)
+        else:
+            raise RuntimeError(f"Edge failed to generate PDF. Exit code: {proc.returncode}. Stderr: {proc.stderr}")
         
         # Encrypt the PDF
         reader = PdfReader(temp_pdf_abs)
@@ -348,11 +359,6 @@ def generate_pdf(html_content, final_pdf_path, password):
             writer.write(f)
             
     finally:
-        # Secure cleanup attempt
-        if os.path.exists(html_path):
-            os.remove(html_path)
-        if os.path.exists(temp_pdf_path):
-            os.remove(temp_pdf_path)
         import shutil
         shutil.rmtree(temp_dir, ignore_errors=True)
 
