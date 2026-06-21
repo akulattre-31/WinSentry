@@ -41,13 +41,13 @@ def render_tags(finding):
     if "signature_status" in finding:
         status = safe_html(finding["signature_status"])
         color = "#4CAF50" if status == "Valid" else "#F44336"
-        tags_html += f'<span class="tag" style="background-color: {color};">Sig: {status}</span>'
+        tags_html += f'<div class="tag" style="background-color: {color};">Sig: {status}</div>'
     if "signer_subject" in finding and finding["signer_subject"]:
         subject = safe_html(finding["signer_subject"])
-        tags_html += f'<span class="tag tag-blue">Signer: {subject}</span>'
+        tags_html += f'<div class="tag tag-blue">Signer: {subject}</div>'
     if "lookalike_match" in finding and finding["lookalike_match"]:
         match = safe_html(finding["lookalike_match"])
-        tags_html += f'<span class="tag tag-red">Lookalike: {match}</span>'
+        tags_html += f'<div class="tag tag-red">Lookalike: {match}</div>'
     return f'<div class="tags-container">{tags_html}</div>' if tags_html else ""
 
 def render_remediation(finding):
@@ -58,9 +58,9 @@ def render_remediation(finding):
 
 def generate_findings_table(findings):
     if not findings:
-        return "<p>No findings.</p>"
+        return "<p class=\"no-findings\">No findings.</p>"
     
-    html_out = "<table class=\"findings\"><thead><tr><th>ID</th><th>Severity</th><th>Title</th><th>Detail</th><th>Recommendation</th></tr></thead><tbody>"
+    html_out = "<table class=\"findings\"><thead><tr><th style=\"width: 10%;\">ID</th><th style=\"width: 12%;\">Severity</th><th style=\"width: 25%;\">Title</th><th style=\"width: 33%;\">Detail</th><th style=\"width: 20%;\">Recommendation</th></tr></thead><tbody>"
     for f in sorted(findings, key=lambda x: {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "INFO": 4}.get(x["severity"], 5)):
         sev = safe_html(f["severity"])
         sev_class = f"sev-{sev.lower()}"
@@ -95,6 +95,20 @@ def generate_html(data):
                 
     # Determine gauge color
     gauge_color = "#4CAF50" if risk_score >= 80 else "#FF9800" if risk_score >= 50 else "#F44336"
+    
+    # Module descriptions
+    module_descriptions = {
+        "registry_autoruns": "Checks Windows Registry keys commonly used for persistence and auto-starting malware.",
+        "scheduled_tasks": "Analyzes scheduled tasks for suspicious binaries, scripts, or abnormal execution parameters.",
+        "services": "Scans Windows services for unquoted paths, malicious executables, or rogue installations.",
+        "active_connections": "Monitors active network connections for communication with suspicious IP addresses or ports.",
+        "running_processes": "Detects anomalies in running processes, lookalike names, and unsigned executables.",
+        "process_injection": "Identifies memory anomalies that might indicate code injection or hollowing.",
+        "wmi_persistence": "Scans WMI event filters and consumers used for fileless malware persistence.",
+        "user_accounts": "Checks for recently added or hidden user accounts that attackers use for backdoor access.",
+        "security_events": "Analyzes Windows Event Logs for failed logins, cleared logs, or other suspicious activity.",
+        "file_system": "Scans critical system directories for unexpected files, executables, or scripts."
+    }
 
     html_content = f"""<!DOCTYPE html>
 <html lang="en">
@@ -103,9 +117,9 @@ def generate_html(data):
     <title>WinSentry Report - {safe_html(meta.get('hostname', 'Unknown'))}</title>
     <style>
         body {{
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #121212;
-            color: #FFFFFF;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: #F8F9FA;
+            color: #212529;
             margin: 0;
             padding: 20px;
         }}
@@ -115,89 +129,149 @@ def generate_html(data):
         }}
         .header-table {{
             width: 100%;
-            background-color: #1E1E1E;
+            background-color: #FFFFFF;
             padding: 20px;
+            margin-bottom: 25px;
+            border: 1px solid #DEE2E6;
+        }}
+        h1 {{
+            color: #1A1D20;
             margin-bottom: 20px;
-            border: 1px solid #333333;
+            text-align: center;
         }}
         .score-gauge {{
-            font-size: 2.5rem;
+            font-size: 3rem;
             font-weight: bold;
             color: {gauge_color};
             text-align: center;
+            margin-bottom: 5px;
         }}
         .stat-box {{
-            background-color: #2D2D2D;
-            padding: 10px;
+            background-color: #F8F9FA;
+            padding: 15px;
             text-align: center;
+            border: 1px solid #DEE2E6;
         }}
         .stat-box .count {{
-            font-size: 1.2rem;
+            font-size: 1.5rem;
             font-weight: bold;
+            margin-bottom: 5px;
         }}
-        .sev-critical {{ color: #F44336; }}
-        .sev-high {{ color: #FF9800; }}
-        .sev-medium {{ color: #FFEB3B; }}
-        .sev-low {{ color: #2196F3; }}
-        .sev-info {{ color: #9E9E9E; }}
+        .sev-critical {{ color: #D32F2F; }}
+        .sev-high {{ color: #F57C00; }}
+        .sev-medium {{ color: #FBC02D; }}
+        .sev-low {{ color: #1976D2; }}
+        .sev-info {{ color: #757575; }}
         
         .severity-badge {{
             font-weight: bold;
-            background-color: #333;
+            padding: 4px 8px;
+            color: #FFFFFF;
+            font-size: 0.85em;
+            text-align: center;
+            display: block;
         }}
+        .severity-badge.sev-critical {{ background-color: #D32F2F; }}
+        .severity-badge.sev-high {{ background-color: #F57C00; }}
+        .severity-badge.sev-medium {{ background-color: #FBC02D; }}
+        .severity-badge.sev-low {{ background-color: #1976D2; }}
+        .severity-badge.sev-info {{ background-color: #757575; }}
         
         .module-section {{
-            background-color: #1E1E1E;
+            background-color: #FFFFFF;
             padding: 20px;
-            margin-bottom: 20px;
-            border: 1px solid #333333;
+            margin-bottom: 30px;
+            border: 1px solid #DEE2E6;
         }}
-        h2, h3 {{ margin-top: 0; }}
+        .module-header {{
+            border-bottom: 2px solid #E9ECEF;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }}
+        .module-description {{
+            color: #6C757D;
+            font-size: 0.9em;
+            margin-top: -10px;
+            margin-bottom: 15px;
+        }}
+        h2, h3 {{ 
+            margin-top: 0; 
+            color: #343A40;
+        }}
         
         table.findings {{
             width: 100%;
             border-collapse: collapse;
             margin-top: 10px;
+            border: 1px solid #DEE2E6;
         }}
         table.findings th, table.findings td {{
             text-align: left;
-            padding: 8px;
-            border-bottom: 1px solid #333333;
+            padding: 12px;
+            border-bottom: 1px solid #DEE2E6;
+            border-right: 1px solid #DEE2E6;
+            vertical-align: top;
         }}
-        table.findings th {{ background-color: #2D2D2D; }}
+        table.findings th {{ 
+            background-color: #E9ECEF; 
+            font-weight: bold;
+            color: #495057;
+        }}
+        table.findings tr:nth-child(even) {{
+            background-color: #F8F9FA;
+        }}
         
         .code-wrap {{
             font-family: Consolas, monospace;
-            font-size: 0.9em;
-            color: #E0E0E0;
+            font-size: 0.85em;
+            color: #D81B60;
+            background-color: #FDF4F6;
+            padding: 2px 4px;
+            border: 1px solid #F8D7DA;
+            display: block;
+            margin-bottom: 5px;
         }}
         
         .tags-container {{
-            margin-top: 6px;
+            margin-top: 8px;
         }}
         .tag {{
-            font-size: 0.8em;
+            font-size: 0.75em;
             color: #fff;
-            background-color: #555;
+            background-color: #6C757D;
+            padding: 3px 6px;
+            margin-top: 3px;
+            display: block;
         }}
-        .tag-blue {{ background-color: #1976D2; }}
+        .tag-blue {{ background-color: #0288D1; }}
         .tag-red {{ background-color: #D32F2F; }}
         
         .remediation-box {{
             margin-top: 10px;
-            background-color: #121212;
-            padding: 8px;
+            background-color: #E8F5E9;
+            padding: 10px;
+            border-left: 4px solid #4CAF50;
         }}
         .remediation-box code {{
-            color: #4CAF50;
+            color: #2E7D32;
             font-family: Consolas, monospace;
+            font-weight: bold;
         }}
         .remediation-box strong {{
-            color: #FF9800;
+            color: #1B5E20;
+            display: block;
+            margin-bottom: 4px;
         }}
         
         .diff-section {{
-            border-left: 4px solid #2196F3;
+            border-left: 4px solid #1976D2;
+        }}
+        .no-findings {{
+            color: #28A745;
+            font-weight: bold;
+            padding: 10px;
+            background-color: #E8F5E9;
+            border: 1px solid #C8E6C9;
         }}
     </style>
 </head>
@@ -207,24 +281,24 @@ def generate_html(data):
         
         <table class="header-table">
             <tr>
-                <td style="width: 40%; vertical-align: top;">
-                    <h3>Scan Metadata</h3>
-                    <p><strong>Hostname:</strong> {safe_html(meta.get('hostname'))}</p>
-                    <p><strong>Time (UTC):</strong> {safe_html(meta.get('scan_time_utc'))}</p>
-                    <p><strong>Admin:</strong> {safe_html(str(meta.get('ran_as_admin')))}</p>
-                    <p><strong>Operator:</strong> {safe_html(meta.get('operator'))}</p>
+                <td style="width: 35%; vertical-align: top;">
+                    <h3 style="margin-bottom: 10px; color: #495057;">Scan Metadata</h3>
+                    <p style="margin: 4px 0;"><strong>Hostname:</strong> {safe_html(meta.get('hostname'))}</p>
+                    <p style="margin: 4px 0;"><strong>Time (UTC):</strong> {safe_html(meta.get('scan_time_utc'))}</p>
+                    <p style="margin: 4px 0;"><strong>Admin:</strong> {safe_html(str(meta.get('ran_as_admin')))}</p>
+                    <p style="margin: 4px 0;"><strong>Operator:</strong> {safe_html(meta.get('operator'))}</p>
                 </td>
-                <td style="width: 20%; vertical-align: top; text-align: center;">
+                <td style="width: 25%; vertical-align: middle; text-align: center;">
                     <div class="score-gauge">{risk_score}/100</div>
-                    <div style="color: #B0B0B0;">Risk Score</div>
+                    <div style="color: #6C757D; font-weight: bold; font-size: 1.1em;">Risk Score</div>
                 </td>
-                <td style="width: 40%; vertical-align: top;">
-                    <table>
+                <td style="width: 40%; vertical-align: middle;">
+                    <table style="width: 100%;">
                         <tr>
-                            <td class="stat-box"><div class="count sev-critical">{sev_counts["CRITICAL"]}</div>CRITICAL</td>
-                            <td class="stat-box"><div class="count sev-high">{sev_counts["HIGH"]}</div>HIGH</td>
-                            <td class="stat-box"><div class="count sev-medium">{sev_counts["MEDIUM"]}</div>MEDIUM</td>
-                            <td class="stat-box"><div class="count sev-low">{sev_counts["LOW"]}</div>LOW</td>
+                            <td class="stat-box"><div class="count sev-critical">{sev_counts["CRITICAL"]}</div><span style="font-size: 0.8em; color: #6C757D;">CRITICAL</span></td>
+                            <td class="stat-box"><div class="count sev-high">{sev_counts["HIGH"]}</div><span style="font-size: 0.8em; color: #6C757D;">HIGH</span></td>
+                            <td class="stat-box"><div class="count sev-medium">{sev_counts["MEDIUM"]}</div><span style="font-size: 0.8em; color: #6C757D;">MEDIUM</span></td>
+                            <td class="stat-box"><div class="count sev-low">{sev_counts["LOW"]}</div><span style="font-size: 0.8em; color: #6C757D;">LOW</span></td>
                         </tr>
                     </table>
                 </td>
@@ -232,8 +306,10 @@ def generate_html(data):
         </table>
         
         <div class="module-section">
-            <h2>Scoring Weights</h2>
-            <pre style="color: #B0B0B0; font-size: 0.9em; white-space: pre-wrap;">
+            <div class="module-header">
+                <h2>Scoring Weights</h2>
+            </div>
+            <pre style="color: #495057; font-size: 0.9em; white-space: pre-wrap; background-color: #F8F9FA; padding: 10px; border: 1px solid #DEE2E6;">
 Formula: module_score = max_weight - (critical_count * 15 + high_count * 10 + medium_count * 5 + low_count * 2)
 Floored at 0. Total score is the sum of all module scores.
 
@@ -247,7 +323,10 @@ Weights:
         diff = data["diff"]
         html_content += f"""
         <div class="module-section diff-section">
-            <h2>Diff (Comparison)</h2>
+            <div class="module-header">
+                <h2>Diff (Comparison)</h2>
+            </div>
+            <p class="module-description">Shows the differences between this scan and the baseline comparison scan.</p>
             <h3>New Findings</h3>
             {generate_findings_table(diff.get("new", []))}
             <h3 style="margin-top: 20px;">Resolved Findings</h3>
@@ -259,11 +338,15 @@ Weights:
 
     for mod_name, mod_data in data["modules"].items():
         status = safe_html(mod_data.get("status"))
-        status_color = "#4CAF50" if status == "ok" else "#FF9800"
+        status_color = "#28A745" if status == "ok" else "#F57C00"
+        description = module_descriptions.get(mod_name, "Analyzes system components for security risks.")
         
         html_content += f"""
         <div class="module-section">
-            <h2>{safe_html(mod_name).replace('_', ' ').title()} <span style="font-size: 0.6em; color: {status_color};">[{status}]</span></h2>
+            <div class="module-header">
+                <h2>{safe_html(mod_name).replace('_', ' ').title()} <span style="font-size: 0.6em; color: {status_color};">[{status}]</span></h2>
+            </div>
+            <p class="module-description">{safe_html(description)}</p>
             {generate_findings_table(mod_data.get("findings", []))}
         </div>
         """
