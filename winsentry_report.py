@@ -353,7 +353,8 @@ def generate_pdf(html_content, final_pdf_path, password):
             os.remove(html_path)
         if os.path.exists(temp_pdf_path):
             os.remove(temp_pdf_path)
-        os.rmdir(temp_dir)
+        import shutil
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
 def main():
     args = parse_args()
