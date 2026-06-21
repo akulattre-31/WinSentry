@@ -488,9 +488,15 @@ try {
     if (-not $restore) {
         $Modules.system_health.findings += New-Finding -Id "SYS-04" -Severity "MEDIUM" -Title "No System Restore Points" -Detail "No recent restore points exist." -Recommendation "Enable System Restore or run a backup." -RemediationCommand "Enable-ComputerRestore -Drive '$($env:SystemDrive)\'"
     } else {
-        $age = (Get-Date) - $restore.CreationTime
-        if ($age.TotalDays -gt 30) {
-            $Modules.system_health.findings += New-Finding -Id "SYS-05" -Severity "LOW" -Title "Stale System Restore Point" -Detail "Last restore point is $($age.Days) days old." -Recommendation "Create a new restore point." -RemediationCommand "Checkpoint-Computer -Description 'WinSentry Manual Checkpoint' -RestorePointType 'MODIFY_SETTINGS'"
+        try {
+            # WMI datetime strings look like "20231015123045.000000-240"
+            $parsedDate = [System.Management.ManagementDateTimeConverter]::ToDateTime($restore.CreationTime)
+            $age = (Get-Date) - $parsedDate
+            if ($age.TotalDays -gt 30) {
+                $Modules.system_health.findings += New-Finding -Id "SYS-05" -Severity "LOW" -Title "Stale System Restore Point" -Detail "Last restore point is $([math]::Round($age.TotalDays, 0)) days old." -Recommendation "Create a new restore point." -RemediationCommand "Checkpoint-Computer -Description 'WinSentry Manual Checkpoint' -RestorePointType 'MODIFY_SETTINGS'"
+            }
+        } catch {
+            # Silently fallback if date parsing fails
         }
     }
     

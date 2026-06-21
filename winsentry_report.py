@@ -114,12 +114,12 @@ def generate_html(data):
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>WinSentry Report - {safe_html(meta.get('hostname', 'Unknown'))}</title>
+    <title>WinSentry Report - {{safe_html(meta.get('hostname', 'Unknown'))}}</title>
     <style>
         body {{
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            background-color: #F8F9FA;
-            color: #212529;
+            background-color: #0A0A0C;
+            color: #E0E0E0;
             margin: 0;
             padding: 20px;
         }}
@@ -129,15 +129,19 @@ def generate_html(data):
         }}
         .header-table {{
             width: 100%;
-            background-color: #FFFFFF;
+            background-color: #121215;
             padding: 20px;
             margin-bottom: 25px;
-            border: 1px solid #DEE2E6;
+            border: 1px solid #333333;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.1);
         }}
         h1 {{
-            color: #1A1D20;
+            color: #FFFFFF;
             margin-bottom: 20px;
             text-align: center;
+            text-shadow: 0 0 10px #00FFFF, 0 0 20px #00FFFF;
+            text-transform: uppercase;
+            letter-spacing: 2px;
         }}
         .score-gauge {{
             font-size: 3rem;
@@ -145,89 +149,104 @@ def generate_html(data):
             color: {gauge_color};
             text-align: center;
             margin-bottom: 5px;
+            text-shadow: 0 0 10px {gauge_color};
         }}
         .stat-box {{
-            background-color: #F8F9FA;
+            background-color: #1A1A1E;
             padding: 15px;
             text-align: center;
-            border: 1px solid #DEE2E6;
+            border: 1px solid #222222;
         }}
         .stat-box .count {{
             font-size: 1.5rem;
             font-weight: bold;
             margin-bottom: 5px;
         }}
-        .sev-critical {{ color: #D32F2F; }}
-        .sev-high {{ color: #F57C00; }}
-        .sev-medium {{ color: #FBC02D; }}
-        .sev-low {{ color: #1976D2; }}
-        .sev-info {{ color: #757575; }}
+        .sev-critical {{ color: #FF003C; text-shadow: 0 0 8px #FF003C; }}
+        .sev-high {{ color: #FF8A00; text-shadow: 0 0 8px #FF8A00; }}
+        .sev-medium {{ color: #FFDD00; text-shadow: 0 0 8px #FFDD00; }}
+        .sev-low {{ color: #00E5FF; text-shadow: 0 0 8px #00E5FF; }}
+        .sev-info {{ color: #AAAAAA; }}
         
         .severity-badge {{
             font-weight: bold;
             padding: 4px 8px;
-            color: #FFFFFF;
+            color: #000000;
             font-size: 0.85em;
             text-align: center;
             display: block;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }}
-        .severity-badge.sev-critical {{ background-color: #D32F2F; }}
-        .severity-badge.sev-high {{ background-color: #F57C00; }}
-        .severity-badge.sev-medium {{ background-color: #FBC02D; }}
-        .severity-badge.sev-low {{ background-color: #1976D2; }}
-        .severity-badge.sev-info {{ background-color: #757575; }}
+        .severity-badge.sev-critical {{ background-color: #FF003C; box-shadow: 0 0 8px #FF003C; }}
+        .severity-badge.sev-high {{ background-color: #FF8A00; box-shadow: 0 0 8px #FF8A00; }}
+        .severity-badge.sev-medium {{ background-color: #FFDD00; box-shadow: 0 0 8px #FFDD00; }}
+        .severity-badge.sev-low {{ background-color: #00E5FF; box-shadow: 0 0 8px #00E5FF; }}
+        .severity-badge.sev-info {{ background-color: #555555; }}
         
         .module-section {{
-            background-color: #FFFFFF;
+            background-color: #121215;
             padding: 20px;
             margin-bottom: 30px;
-            border: 1px solid #DEE2E6;
+            border: 1px solid #333333;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
         }}
         .module-header {{
-            border-bottom: 2px solid #E9ECEF;
+            border-bottom: 1px solid #333333;
             padding-bottom: 10px;
             margin-bottom: 15px;
         }}
         .module-description {{
-            color: #6C757D;
+            color: #888888;
             font-size: 0.9em;
             margin-top: -10px;
             margin-bottom: 15px;
         }}
-        h2, h3 {{ 
+        h2 {{
             margin-top: 0; 
-            color: #343A40;
+            color: #FFFFFF;
+            text-shadow: 0 0 5px #FFFFFF;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }}
+        h3 {{
+            margin-top: 0;
+            color: #BBBBBB;
         }}
         
         table.findings {{
             width: 100%;
             border-collapse: collapse;
             margin-top: 10px;
-            border: 1px solid #DEE2E6;
+            border: 1px solid #333333;
+            background-color: #0D0D10;
         }}
         table.findings th, table.findings td {{
             text-align: left;
             padding: 12px;
-            border-bottom: 1px solid #DEE2E6;
-            border-right: 1px solid #DEE2E6;
+            border-bottom: 1px solid #222222;
+            border-right: 1px solid #222222;
             vertical-align: top;
         }}
         table.findings th {{ 
-            background-color: #E9ECEF; 
+            background-color: #1A1A1E; 
             font-weight: bold;
-            color: #495057;
+            color: #00E5FF;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 2px solid #333333;
         }}
         table.findings tr:nth-child(even) {{
-            background-color: #F8F9FA;
+            background-color: #111114;
         }}
         
         .code-wrap {{
             font-family: Consolas, monospace;
             font-size: 0.85em;
-            color: #D81B60;
-            background-color: #FDF4F6;
-            padding: 2px 4px;
-            border: 1px solid #F8D7DA;
+            color: #00FF66;
+            background-color: #0A0A0C;
+            padding: 4px;
+            border: 1px solid #222222;
             display: block;
             margin-bottom: 5px;
         }}
@@ -237,41 +256,45 @@ def generate_html(data):
         }}
         .tag {{
             font-size: 0.75em;
-            color: #fff;
-            background-color: #6C757D;
+            color: #FFFFFF;
+            background-color: #333333;
             padding: 3px 6px;
             margin-top: 3px;
             display: block;
+            font-weight: bold;
         }}
-        .tag-blue {{ background-color: #0288D1; }}
-        .tag-red {{ background-color: #D32F2F; }}
+        .tag-blue {{ background-color: #00E5FF; color: #000; box-shadow: 0 0 5px #00E5FF; }}
+        .tag-red {{ background-color: #FF003C; color: #FFF; box-shadow: 0 0 5px #FF003C; }}
         
         .remediation-box {{
             margin-top: 10px;
-            background-color: #E8F5E9;
+            background-color: #1A1A1E;
             padding: 10px;
-            border-left: 4px solid #4CAF50;
+            border-left: 4px solid #00FF66;
         }}
         .remediation-box code {{
-            color: #2E7D32;
+            color: #00FF66;
             font-family: Consolas, monospace;
             font-weight: bold;
+            text-shadow: 0 0 5px #00FF66;
         }}
         .remediation-box strong {{
-            color: #1B5E20;
+            color: #FFFFFF;
             display: block;
             margin-bottom: 4px;
         }}
         
         .diff-section {{
-            border-left: 4px solid #1976D2;
+            border-left: 4px solid #00E5FF;
+            box-shadow: -5px 0 15px rgba(0, 229, 255, 0.1);
         }}
         .no-findings {{
-            color: #28A745;
+            color: #00FF66;
             font-weight: bold;
             padding: 10px;
-            background-color: #E8F5E9;
-            border: 1px solid #C8E6C9;
+            background-color: #121512;
+            border: 1px solid #00FF66;
+            text-shadow: 0 0 5px #00FF66;
         }}
     </style>
 </head>
@@ -282,7 +305,7 @@ def generate_html(data):
         <table class="header-table">
             <tr>
                 <td style="width: 35%; vertical-align: top;">
-                    <h3 style="margin-bottom: 10px; color: #495057;">Scan Metadata</h3>
+                    <h3 style="margin-bottom: 10px; color: #00E5FF; text-transform: uppercase;">Scan Metadata</h3>
                     <p style="margin: 4px 0;"><strong>Hostname:</strong> {safe_html(meta.get('hostname'))}</p>
                     <p style="margin: 4px 0;"><strong>Time (UTC):</strong> {safe_html(meta.get('scan_time_utc'))}</p>
                     <p style="margin: 4px 0;"><strong>Admin:</strong> {safe_html(str(meta.get('ran_as_admin')))}</p>
@@ -290,15 +313,15 @@ def generate_html(data):
                 </td>
                 <td style="width: 25%; vertical-align: middle; text-align: center;">
                     <div class="score-gauge">{risk_score}/100</div>
-                    <div style="color: #6C757D; font-weight: bold; font-size: 1.1em;">Risk Score</div>
+                    <div style="color: #AAAAAA; font-weight: bold; font-size: 1.1em; text-transform: uppercase;">Risk Score</div>
                 </td>
                 <td style="width: 40%; vertical-align: middle;">
                     <table style="width: 100%;">
                         <tr>
-                            <td class="stat-box"><div class="count sev-critical">{sev_counts["CRITICAL"]}</div><span style="font-size: 0.8em; color: #6C757D;">CRITICAL</span></td>
-                            <td class="stat-box"><div class="count sev-high">{sev_counts["HIGH"]}</div><span style="font-size: 0.8em; color: #6C757D;">HIGH</span></td>
-                            <td class="stat-box"><div class="count sev-medium">{sev_counts["MEDIUM"]}</div><span style="font-size: 0.8em; color: #6C757D;">MEDIUM</span></td>
-                            <td class="stat-box"><div class="count sev-low">{sev_counts["LOW"]}</div><span style="font-size: 0.8em; color: #6C757D;">LOW</span></td>
+                            <td class="stat-box"><div class="count sev-critical">{sev_counts["CRITICAL"]}</div><span style="font-size: 0.8em; color: #888888;">CRITICAL</span></td>
+                            <td class="stat-box"><div class="count sev-high">{sev_counts["HIGH"]}</div><span style="font-size: 0.8em; color: #888888;">HIGH</span></td>
+                            <td class="stat-box"><div class="count sev-medium">{sev_counts["MEDIUM"]}</div><span style="font-size: 0.8em; color: #888888;">MEDIUM</span></td>
+                            <td class="stat-box"><div class="count sev-low">{sev_counts["LOW"]}</div><span style="font-size: 0.8em; color: #888888;">LOW</span></td>
                         </tr>
                     </table>
                 </td>
@@ -309,7 +332,7 @@ def generate_html(data):
             <div class="module-header">
                 <h2>Scoring Weights</h2>
             </div>
-            <pre style="color: #495057; font-size: 0.9em; white-space: pre-wrap; background-color: #F8F9FA; padding: 10px; border: 1px solid #DEE2E6;">
+            <pre style="color: #00FF66; font-size: 0.9em; white-space: pre-wrap; background-color: #0A0A0C; padding: 10px; border: 1px solid #333333;">
 Formula: module_score = max_weight - (critical_count * 15 + high_count * 10 + medium_count * 5 + low_count * 2)
 Floored at 0. Total score is the sum of all module scores.
 
