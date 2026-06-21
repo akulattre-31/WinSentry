@@ -323,7 +323,7 @@ def generate_pdf(html_content, final_pdf_path, password):
     
     # Use MS Edge to generate PDF natively
     edge_cmd = [
-        "msedge",
+        r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
         "--headless",
         "--disable-gpu",
         f"--print-to-pdf={temp_pdf_abs}",
@@ -355,22 +355,34 @@ def generate_pdf(html_content, final_pdf_path, password):
 def main():
     args = parse_args()
 
-    # Prompt securely for the password without echoing to the screen or using env vars
-    print("PDF Encryption Setup", file=sys.stderr)
-    password = getpass.getpass("Enter a strong password to lock the report: ")
-    if not password:
-        print("Error: Password is required to encrypt the PDF.", file=sys.stderr)
-        sys.exit(1)
+    password = None
 
     try:
         if args.input_json == "-":
             # Read from standard input (pipeline)
-            json_str = sys.stdin.read()
-            # If the script pipes empty string or just whitespace
-            if not json_str.strip():
-                raise ValueError("No JSON data received from standard input.")
+            payload = sys.stdin.read()
+            if not payload.strip():
+                raise ValueError("No data received from standard input.")
+            
+            # The first line is the password, the rest is JSON
+            if "\n" not in payload:
+                raise ValueError("Invalid STDIN format. Expected password on first line.")
+            
+            password_line, json_str = payload.split("\n", 1)
+            password = password_line.strip()
+            
+            if not password:
+                print("Error: Password is required to encrypt the PDF.", file=sys.stderr)
+                sys.exit(1)
+                
             data = json.loads(json_str)
         else:
+            # Fallback for manual file reading (still requires getpass here if not piped)
+            print("PDF Encryption Setup", file=sys.stderr)
+            password = getpass.getpass("Enter a strong password to lock the report: ")
+            if not password:
+                print("Error: Password is required to encrypt the PDF.", file=sys.stderr)
+                sys.exit(1)
             with open(args.input_json, "r", encoding="utf-8-sig") as f:
                 data = json.load(f)
     except Exception as e:

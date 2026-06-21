@@ -31,6 +31,16 @@ Write-Host "=========================================" -ForegroundColor Cyan
 Write-Host "         WinSentry v1 - Scanner          " -ForegroundColor Cyan
 Write-Host "=========================================" -ForegroundColor Cyan
 
+$securePassword = Read-Host "Enter a password to encrypt the PDF report" -AsSecureString
+if (-not $securePassword) {
+    Write-Error "Password is required for PDF encryption."
+    exit
+}
+
+$BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword)
+$plainPassword = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+[Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
+
 # Enforce Self-Targeting: Implicitly local by design (no -ComputerName parameters used).
 
 # --- Configuration & Helpers ---
@@ -609,8 +619,15 @@ Write-Host "Scan complete. Preparing to generate PDF..." -ForegroundColor Green
 if (Test-Path ".\winsentry_report.exe") {
     $pdfPath = ".\WinSentry_Report_Encrypted.pdf"
     
-    # Pipe the JSON output directly to the executable
-    $reportJson | .\winsentry_report.exe - $pdfPath
+    # Prepend the plaintext password to the JSON payload, separated by a newline
+    $payload = $plainPassword + "`n" + $reportJson
+    
+    # Pipe the payload securely to the executable via STDIN
+    $payload | .\winsentry_report.exe - $pdfPath
+    
+    # Wipe the plaintext password from memory
+    $plainPassword = $null
+    $payload = $null
     
     if ($LASTEXITCODE -eq 0) {
         Write-Host "Report secured at: $pdfPath" -ForegroundColor Green
