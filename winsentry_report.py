@@ -102,22 +102,10 @@ def generate_html(data):
     <meta charset="UTF-8">
     <title>WinSentry Report - {safe_html(meta.get('hostname', 'Unknown'))}</title>
     <style>
-        :root {{
-            --bg-color: #121212;
-            --surface-color: #1E1E1E;
-            --text-primary: #FFFFFF;
-            --text-secondary: #B0B0B0;
-            --border-color: #333333;
-            --critical: #F44336;
-            --high: #FF9800;
-            --medium: #FFEB3B;
-            --low: #2196F3;
-            --info: #9E9E9E;
-        }}
         body {{
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-primary);
+            background-color: #121212;
+            color: #FFFFFF;
             margin: 0;
             padding: 20px;
         }}
@@ -127,10 +115,10 @@ def generate_html(data):
         }}
         .header-table {{
             width: 100%;
-            background-color: var(--surface-color);
+            background-color: #1E1E1E;
             padding: 20px;
             margin-bottom: 20px;
-            border: 1px solid var(--border-color);
+            border: 1px solid #333333;
         }}
         .score-gauge {{
             font-size: 2.5rem;
@@ -147,11 +135,11 @@ def generate_html(data):
             font-size: 1.2rem;
             font-weight: bold;
         }}
-        .sev-critical {{ color: var(--critical); }}
-        .sev-high {{ color: var(--high); }}
-        .sev-medium {{ color: var(--medium); }}
-        .sev-low {{ color: var(--low); }}
-        .sev-info {{ color: var(--info); }}
+        .sev-critical {{ color: #F44336; }}
+        .sev-high {{ color: #FF9800; }}
+        .sev-medium {{ color: #FFEB3B; }}
+        .sev-low {{ color: #2196F3; }}
+        .sev-info {{ color: #9E9E9E; }}
         
         .severity-badge {{
             font-weight: bold;
@@ -159,10 +147,10 @@ def generate_html(data):
         }}
         
         .module-section {{
-            background-color: var(--surface-color);
+            background-color: #1E1E1E;
             padding: 20px;
             margin-bottom: 20px;
-            border: 1px solid var(--border-color);
+            border: 1px solid #333333;
         }}
         h2, h3 {{ margin-top: 0; }}
         
@@ -174,7 +162,7 @@ def generate_html(data):
         table.findings th, table.findings td {{
             text-align: left;
             padding: 8px;
-            border-bottom: 1px solid var(--border-color);
+            border-bottom: 1px solid #333333;
         }}
         table.findings th {{ background-color: #2D2D2D; }}
         
@@ -245,7 +233,7 @@ def generate_html(data):
         
         <div class="module-section">
             <h2>Scoring Weights</h2>
-            <pre style="color: var(--text-secondary); font-size: 0.9em; white-space: pre-wrap;">
+            <pre style="color: #B0B0B0; font-size: 0.9em; white-space: pre-wrap;">
 Formula: module_score = max_weight - (critical_count * 15 + high_count * 10 + medium_count * 5 + low_count * 2)
 Floored at 0. Total score is the sum of all module scores.
 

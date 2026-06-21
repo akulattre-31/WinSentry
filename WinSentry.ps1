@@ -486,7 +486,7 @@ try {
     # Restore Point
     $restore = Get-ComputerRestorePoint -ErrorAction SilentlyContinue | Sort-Object CreationTime -Descending | Select-Object -First 1
     if (-not $restore) {
-        $Modules.system_health.findings += New-Finding -Id "SYS-04" -Severity "MEDIUM" -Title "No System Restore Points" -Detail "No recent restore points exist." -Recommendation "Enable System Restore or run a backup." -RemediationCommand "Enable-ComputerRestore -Drive 'C:\'"
+        $Modules.system_health.findings += New-Finding -Id "SYS-04" -Severity "MEDIUM" -Title "No System Restore Points" -Detail "No recent restore points exist." -Recommendation "Enable System Restore or run a backup." -RemediationCommand "Enable-ComputerRestore -Drive '$($env:SystemDrive)\'"
     } else {
         $age = (Get-Date) - $restore.CreationTime
         if ($age.TotalDays -gt 30) {
@@ -501,9 +501,9 @@ try {
     }
     
     # Volume
-    $vols = Get-Volume -ErrorAction SilentlyContinue | Where-Object DriveLetter -eq $env:SystemDrive[0]
-    if ($vols) {
-        $freePct = ($vols.SizeRemaining / $vols.Size) * 100
+    $sysVol = Get-Volume -ErrorAction SilentlyContinue | Where-Object DriveLetter -eq $env:SystemDrive[0] | Select-Object -First 1
+    if ($sysVol -and $sysVol.Size -gt 0) {
+        $freePct = ($sysVol.SizeRemaining / $sysVol.Size) * 100
         if ($freePct -lt 10) {
             $Modules.system_health.findings += New-Finding -Id "SYS-07" -Severity "HIGH" -Title "Low Disk Space" -Detail "System drive has $([math]::Round($freePct, 1))% free space." -Recommendation "Free up disk space to prevent update failures."
         }
