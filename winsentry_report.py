@@ -280,7 +280,9 @@ def generate_pdf(html_content, final_pdf_path, password):
     import io
     import os
     
-    final_pdf_path = os.path.abspath(final_pdf_path)
+    is_base64 = final_pdf_path == "BASE64"
+    if not is_base64:
+        final_pdf_path = os.path.abspath(final_pdf_path)
     
     # Use xhtml2pdf to generate PDF natively in memory
     pdf_buffer = io.BytesIO()
@@ -300,18 +302,38 @@ def generate_pdf(html_content, final_pdf_path, password):
         
     writer.encrypt(password)
     
-    # Write the encrypted PDF directly to the final file using low-level OS calls
+    # Write the encrypted PDF directly to the final file safely
     final_buffer = io.BytesIO()
     writer.write(final_buffer)
     
+    if is_base64:
+        import base64
+        sys.stdout.write("BASE64_PDF_START\\n")
+        sys.stdout.write(base64.b64encode(final_buffer.getvalue()).decode('utf-8'))
+        sys.stdout.write("\\nBASE64_PDF_END\\n")
+        sys.stdout.flush()
+        return
+
+    fds_to_close = []
+    fd = -1
     try:
-        fd = os.open(final_pdf_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_BINARY)
+        while True:
+            fd = os.open(final_pdf_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, 'O_BINARY', 0))
+            if fd > 2:
+                break
+            fds_to_close.append(fd)
         os.write(fd, final_buffer.getvalue())
-        os.close(fd)
-    except Exception as e:
-        # Fallback to pure python open just in case
-        with open(final_pdf_path, "wb") as f:
-            f.write(final_buffer.getvalue())
+    finally:
+        if fd > 2:
+            try:
+                os.close(fd)
+            except:
+                pass
+        for bad_fd in fds_to_close:
+            try:
+                os.close(bad_fd)
+            except:
+                pass
 
 def main():
     import os
@@ -372,9 +394,8 @@ def main():
         print(f"Successfully generated encrypted PDF report at: {args.output_pdf}")
     except Exception as e:
         import traceback
-        with open("error_log.txt", "w") as f:
-            f.write(traceback.format_exc())
-        print(f"Error generating PDF: {e}", file=sys.stderr)
+        err_msg = traceback.format_exc()
+        sys.stderr.write(f"An error occurred: {e}\n{err_msg}\n")
         sys.exit(1)
 
 if __name__ == "__main__":

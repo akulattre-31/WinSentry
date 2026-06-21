@@ -622,17 +622,41 @@ if (Test-Path ".\winsentry_report.exe") {
     # Prepend the plaintext password to the JSON payload, separated by a newline
     $payload = $plainPassword + "`n" + $reportJson
     
-    # Pipe the payload securely to the executable via STDIN
-    $payload | .\winsentry_report.exe - $pdfPath
+    # Pipe the payload securely to the executable via STDIN and capture the output
+    $output = $payload | .\winsentry_report.exe - BASE64
     
     # Wipe the plaintext password from memory
     $plainPassword = $null
     $payload = $null
     
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "Report secured at: $pdfPath" -ForegroundColor Green
+    $base64Data = ""
+    $inBase64 = $false
+    foreach ($line in $output) {
+        if ($line -match "BASE64_PDF_START") {
+            $inBase64 = $true
+            continue
+        }
+        if ($line -match "BASE64_PDF_END") {
+            $inBase64 = $false
+            continue
+        }
+        if ($inBase64) {
+            $base64Data += $line.Trim()
+        }
+    }
+    
+    if ($base64Data) {
+        try {
+            $bytes = [Convert]::FromBase64String($base64Data)
+            $outPath = Join-Path $PWD "WinSentry_Report_Encrypted.pdf"
+            [IO.File]::WriteAllBytes($outPath, $bytes)
+            Write-Host "Report secured at: $outPath" -ForegroundColor Green
+        } catch {
+            Write-Host "Failed to decode and write PDF: $_" -ForegroundColor Red
+        }
     } else {
         Write-Host "Failed to generate PDF. Check winsentry_report.exe output." -ForegroundColor Red
+        $output | Out-String | Write-Host
     }
 } else {
     Write-Host "Error: winsentry_report.exe not found in current directory. Cannot generate report." -ForegroundColor Red
