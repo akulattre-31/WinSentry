@@ -326,6 +326,9 @@ def generate_pdf(html_content, final_pdf_path, password):
         r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
         "--headless",
         "--disable-gpu",
+        "--no-sandbox",
+        "--disable-software-rasterizer",
+        f"--user-data-dir={temp_dir}",
         f"--print-to-pdf={temp_pdf_abs}",
         html_abs
     ]
