@@ -60,7 +60,7 @@ def generate_findings_table(findings):
     if not findings:
         return "<p>No findings.</p>"
     
-    html_out = "<table><thead><tr><th>ID</th><th>Severity</th><th>Title</th><th>Detail</th><th>Recommendation</th></tr></thead><tbody>"
+    html_out = "<table class=\"findings\"><thead><tr><th>ID</th><th>Severity</th><th>Title</th><th>Detail</th><th>Recommendation</th></tr></thead><tbody>"
     for f in sorted(findings, key=lambda x: {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "INFO": 4}.get(x["severity"], 5)):
         sev = safe_html(f["severity"])
         sev_class = f"sev-{sev.lower()}"
@@ -73,7 +73,7 @@ def generate_findings_table(findings):
         <tr>
             <td>{safe_html(f["id"])}</td>
             <td><span class="severity-badge {sev_class}">{sev}</span></td>
-            <td>{safe_html(f["title"])}{tags}</td>
+            <td>{safe_html(f["title"])}<br/>{tags}</td>
             <td class="code-wrap">{detail_html}{remediation}</td>
             <td>{safe_html(f["recommendation"])}</td>
         </tr>
@@ -125,35 +125,26 @@ def generate_html(data):
             max-width: 1200px;
             margin: 0 auto;
         }}
-        .header-card {{
+        .header-table {{
+            width: 100%;
             background-color: var(--surface-color);
             padding: 20px;
-            border-radius: 8px;
             margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
             border: 1px solid var(--border-color);
         }}
         .score-gauge {{
-            font-size: 3rem;
+            font-size: 2.5rem;
             font-weight: bold;
             color: {gauge_color};
             text-align: center;
         }}
-        .stats-grid {{
-            display: flex;
-            gap: 15px;
-        }}
         .stat-box {{
             background-color: #2D2D2D;
-            padding: 15px;
-            border-radius: 6px;
+            padding: 10px;
             text-align: center;
-            min-width: 80px;
         }}
         .stat-box .count {{
-            font-size: 1.5rem;
+            font-size: 1.2rem;
             font-weight: bold;
         }}
         .sev-critical {{ color: var(--critical); }}
@@ -163,9 +154,6 @@ def generate_html(data):
         .sev-info {{ color: var(--info); }}
         
         .severity-badge {{
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.85em;
             font-weight: bold;
             background-color: #333;
         }}
@@ -173,41 +161,34 @@ def generate_html(data):
         .module-section {{
             background-color: var(--surface-color);
             padding: 20px;
-            border-radius: 8px;
             margin-bottom: 20px;
             border: 1px solid var(--border-color);
         }}
         h2, h3 {{ margin-top: 0; }}
         
-        table {{
+        table.findings {{
             width: 100%;
             border-collapse: collapse;
             margin-top: 10px;
         }}
-        th, td {{
+        table.findings th, table.findings td {{
             text-align: left;
-            padding: 12px;
+            padding: 8px;
             border-bottom: 1px solid var(--border-color);
         }}
-        th {{ background-color: #2D2D2D; }}
+        table.findings th {{ background-color: #2D2D2D; }}
         
         .code-wrap {{
             font-family: Consolas, monospace;
             font-size: 0.9em;
-            word-break: break-all;
             color: #E0E0E0;
         }}
         
         .tags-container {{
             margin-top: 6px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
         }}
         .tag {{
-            font-size: 0.75em;
-            padding: 2px 6px;
-            border-radius: 3px;
+            font-size: 0.8em;
             color: #fff;
             background-color: #555;
         }}
@@ -217,19 +198,14 @@ def generate_html(data):
         .remediation-box {{
             margin-top: 10px;
             background-color: #121212;
-            border-left: 3px solid #FF9800;
             padding: 8px;
-            border-radius: 4px;
         }}
         .remediation-box code {{
             color: #4CAF50;
-            user-select: all;
             font-family: Consolas, monospace;
         }}
         .remediation-box strong {{
             color: #FF9800;
-            font-size: 0.85em;
-            text-transform: uppercase;
         }}
         
         .diff-section {{
@@ -241,27 +217,31 @@ def generate_html(data):
     <div class="container">
         <h1>WinSentry Security Report</h1>
         
-        <div class="header-card">
-            <div>
-                <h3>Scan Metadata</h3>
-                <p><strong>Hostname:</strong> {safe_html(meta.get('hostname'))}</p>
-                <p><strong>Time (UTC):</strong> {safe_html(meta.get('scan_time_utc'))}</p>
-                <p><strong>Admin:</strong> {safe_html(str(meta.get('ran_as_admin')))}</p>
-                <p><strong>Operator:</strong> {safe_html(meta.get('operator'))}</p>
-            </div>
-            
-            <div>
-                <div class="score-gauge">{risk_score}/100</div>
-                <div style="text-align: center; color: var(--text-secondary);">Risk Score</div>
-            </div>
-            
-            <div class="stats-grid">
-                <div class="stat-box"><div class="count sev-critical">{sev_counts["CRITICAL"]}</div>CRITICAL</div>
-                <div class="stat-box"><div class="count sev-high">{sev_counts["HIGH"]}</div>HIGH</div>
-                <div class="stat-box"><div class="count sev-medium">{sev_counts["MEDIUM"]}</div>MEDIUM</div>
-                <div class="stat-box"><div class="count sev-low">{sev_counts["LOW"]}</div>LOW</div>
-            </div>
-        </div>
+        <table class="header-table">
+            <tr>
+                <td style="width: 40%; vertical-align: top;">
+                    <h3>Scan Metadata</h3>
+                    <p><strong>Hostname:</strong> {safe_html(meta.get('hostname'))}</p>
+                    <p><strong>Time (UTC):</strong> {safe_html(meta.get('scan_time_utc'))}</p>
+                    <p><strong>Admin:</strong> {safe_html(str(meta.get('ran_as_admin')))}</p>
+                    <p><strong>Operator:</strong> {safe_html(meta.get('operator'))}</p>
+                </td>
+                <td style="width: 20%; vertical-align: top; text-align: center;">
+                    <div class="score-gauge">{risk_score}/100</div>
+                    <div style="color: #B0B0B0;">Risk Score</div>
+                </td>
+                <td style="width: 40%; vertical-align: top;">
+                    <table>
+                        <tr>
+                            <td class="stat-box"><div class="count sev-critical">{sev_counts["CRITICAL"]}</div>CRITICAL</td>
+                            <td class="stat-box"><div class="count sev-high">{sev_counts["HIGH"]}</div>HIGH</td>
+                            <td class="stat-box"><div class="count sev-medium">{sev_counts["MEDIUM"]}</div>MEDIUM</td>
+                            <td class="stat-box"><div class="count sev-low">{sev_counts["LOW"]}</div>LOW</td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
         
         <div class="module-section">
             <h2>Scoring Weights</h2>
@@ -308,46 +288,23 @@ Weights:
     return html_content
 
 def generate_pdf(html_content, final_pdf_path, password):
+    from xhtml2pdf import pisa
     import tempfile
-    import time
     
     # Create temp files
     temp_dir = tempfile.mkdtemp()
-    profile_dir = os.path.join(temp_dir, "edge_profile")
-    html_path = os.path.join(temp_dir, "temp.html")
     temp_pdf_path = os.path.join(temp_dir, "temp.pdf")
     
-    with open(html_path, "w", encoding="utf-8") as f:
-        f.write(html_content)
-        
-    html_abs = str(pathlib.Path(html_path).absolute())
-    temp_pdf_abs = str(pathlib.Path(temp_pdf_path).absolute())
-    profile_abs = str(pathlib.Path(profile_dir).absolute())
-    
-    # Use MS Edge to generate PDF natively
-    edge_cmd = [
-        r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
-        "--headless=new",
-        "--disable-gpu",
-        "--no-sandbox",
-        "--disable-software-rasterizer",
-        f"--user-data-dir={profile_abs}",
-        f"--print-to-pdf={temp_pdf_abs}",
-        html_abs
-    ]
     try:
-        proc = subprocess.run(edge_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        
-        # Wait up to 15 seconds for the PDF to be fully generated
-        for _ in range(150):
-            if os.path.exists(temp_pdf_abs) and os.path.getsize(temp_pdf_abs) > 0:
-                break
-            time.sleep(0.1)
-        else:
-            raise RuntimeError(f"Edge failed to generate PDF. Exit code: {proc.returncode}. Stderr: {proc.stderr}")
-        
+        # Use xhtml2pdf to generate PDF natively in pure Python (No Edge required!)
+        with open(temp_pdf_path, "w+b") as result_file:
+            pisa_status = pisa.CreatePDF(html_content, dest=result_file)
+            
+        if pisa_status.err:
+            raise RuntimeError("xhtml2pdf failed to generate PDF.")
+            
         # Encrypt the PDF
-        reader = PdfReader(temp_pdf_abs)
+        reader = PdfReader(temp_pdf_path)
         writer = PdfWriter()
         
         for page in reader.pages:
